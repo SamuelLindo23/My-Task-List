@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sam's Task Dashboard</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  /* ====== FILL THESE IN ====== */
+  /* See SUPABASE_URL / SUPABASE_ANON_KEY near the bottom of this file. */
+
+  :root {
+    --cream: #F5EDE0;
+    --paper: #FFFBF4;
+    --terracotta: #C1623E;
+    --terracotta-dark: #9A4A2E;
+    --ochre: #C98A3B;
+    --clay: #8A5A3A;
+    --rust: #A6432B;
+    --umber: #6B4226;
+    --ink: #3A2A20;
+    --muted: #8C7866;
+    --line: #E2D2BB;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--ink);
+    background: var(--cream);
+    background-image: radial-gradient(circle at 1px 1px, rgba(154,74,46,0.06) 1px, transparent 0);
+    background-size: 22px 22px;
+    min-height: 100vh;
+  }
+  h1, h2, h3 { font-family: 'Fraunces', Georgia, serif; margin: 0; }
+
+  #app { max-width: 1100px; margin: 0 auto; padding: 28px 20px 60px; }
+
+  .sd-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 22px;
+    border-bottom: 2px solid var(--terracotta);
+    padding-bottom: 16px;
+  }
+  .sd-title { font-size: 32px; font-weight: 600; color: var(--terracotta-dark); letter-spacing: -0.3px; }
+  .sd-sub { font-size: 13px; color: var(--muted); margin-top: 4px; font-style: italic; }
+  .sd-stats { display: flex; gap: 16px; font-size: 13px; color: var(--clay); }
+  .sd-stats b { color: var(--terracotta-dark); font-size: 16px; }
+
+  .sd-banner {
+    background: #fff3e0;
+    border: 1px solid var(--ochre);
+    color: var(--umber);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13px;
+    margin-bottom: 20px;
+    display: none;
+  }
+  .sd-banner.show { display: block; }
+  .sd-banner code { background: rgba(154,74,46,0.08); padding: 1px 5px; border-radius: 4px; }
+
+  .sd-addbar {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 26px;
+    box-shadow: 0 1px 0 rgba(154,74,46,0.05);
+  }
+  .sd-addbar input[type="text"] {
+    flex: 1 1 220px;
+    min-width: 160px;
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--ink);
+    font-family: inherit;
+  }
+  .sd-addbar select, .sd-addbar input[type="date"] {
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 13px;
+    color: var(--ink);
+    font-family: inherit;
+  }
+  .sd-addbar input:focus, .sd-addbar select:focus {
+    outline: 2px solid var(--terracotta);
+    outline-offset: 1px;
+  }
+  .sd-addbtn {
+    background: var(--terracotta);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+  }
+  .sd-addbtn:hover { background: var(--terracotta-dark); }
+  .sd-addbtn:disabled { opacity: 0.6; cursor: default; }
+  .sd-addbtn:focus-visible { outline: 2px solid var(--umber); outline-offset: 2px; }
+
+  .sd-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; }
+
+  .sd-col { background: rgba(255,251,244,0.6); border-radius: 12px; padding: 14px; min-height: 120px; }
+  .sd-col-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 12px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--cat-color);
+  }
+  .sd-col-icon {
+    width: 26px; height: 26px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--cat-color); color: #fff; flex-shrink: 0;
+  }
+  .sd-col-icon svg { width: 15px; height: 15px; }
+  .sd-col-name { font-size: 14px; font-weight: 700; color: var(--ink); flex: 1; }
+  .sd-col-count { font-size: 12px; color: #fff; background: var(--cat-color); border-radius: 999px; padding: 2px 8px; font-weight: 600; }
+
+  .sd-card {
+    background: var(--paper);
+    border-radius: 9px;
+    padding: 10px 11px 10px 13px;
+    margin-bottom: 9px;
+    border-left: 4px solid var(--cat-color);
+    box-shadow: 0 1px 2px rgba(58,42,32,0.08);
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+    transition: box-shadow 0.1s;
+  }
+  .sd-card:hover { box-shadow: 0 2px 6px rgba(58,42,32,0.14); }
+  .sd-card.sd-done { opacity: 0.55; }
+  .sd-card.sd-done .sd-card-text { text-decoration: line-through; color: var(--muted); }
+
+  .sd-check { width: 17px; height: 17px; margin-top: 2px; accent-color: var(--cat-color); cursor: pointer; flex-shrink: 0; }
+  .sd-card-body { flex: 1; min-width: 0; }
+  .sd-card-text { font-size: 13.5px; line-height: 1.4; word-break: break-word; }
+  .sd-card-meta { display: flex; gap: 8px; margin-top: 4px; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+  .sd-due { font-weight: 600; }
+  .sd-due.sd-overdue { color: var(--rust); }
+  .sd-prio { text-transform: uppercase; letter-spacing: 0.4px; }
+  .sd-del { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 15px; padding: 0 2px; line-height: 1; flex-shrink: 0; }
+  .sd-del:hover { color: var(--rust); }
+
+  .sd-empty { font-size: 12.5px; color: var(--muted); font-style: italic; padding: 6px 2px; }
+  .sd-loading { font-size: 13px; color: var(--muted); padding: 20px; text-align: center; }
+
+  @media (max-width: 480px) {
+    .sd-title { font-size: 26px; }
+    .sd-addbar { flex-direction: column; align-items: stretch; }
+    .sd-addbar select, .sd-addbar input[type="date"] { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="sd-banner" id="sd-config-banner">
+    Add your Supabase project URL and anon key in <code>index.html</code> (look for
+    <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> near the bottom of the file) to connect this dashboard to your database.
+  </div>
+  <div class="sd-loading" id="sd-loading-msg">Loading your tasks…</div>
+  <div id="sd-content" style="display:none;"></div>
+</div>
+
+<script>
+/* =========================================================
+   1) PASTE YOUR SUPABASE CREDENTIALS HERE
+   - Project URL: Supabase dashboard → Settings → API → Project URL
+   - anon public key: same page → Project API keys → "anon public"
+   Never paste your service_role key here — only the anon/public key.
+   ========================================================= */
+const SUPABASE_URL = "YOUR_SUPABASE_URL";
+const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+/* ========================================================= */
+
+const CATEGORIES = [
+  { id: "household", name: "Household", color: "#C1623E", icon: "house" },
+  { id: "children", name: "Children", color: "#C98A3B", icon: "star" },
+  { id: "networking", name: "Networking", color: "#A6432B", icon: "link" },
+  { id: "jobs", name: "Job Applications", color: "#6B4226", icon: "case" },
+  { id: "trip", name: "Trip / Personal / Misc", color: "#8A5A3A", icon: "compass" }
+];
+
+const ICONS = {
+  house: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>',
+  star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 6.9L12 17.3 5.7 20.8l1.7-6.9-5.4-4.7 7.1-.6z"/></svg>',
+  link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17H7a5 5 0 010-10h2"/><path d="M15 7h2a5 5 0 010 10h-2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>',
+  case: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>',
+  compass: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>'
+};
+
+const configured = SUPABASE_URL !== "YOUR_SUPABASE_URL" && SUPABASE_ANON_KEY !== "YOUR_SUPABASE_ANON_KEY";
+let supabase = null;
+let tasks = [];
+
+const contentEl = document.getElementById("sd-content");
+const loadingEl = document.getElementById("sd-loading-msg");
+const bannerEl = document.getElementById("sd-config-banner");
+
+function escapeHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function fmtDue(due) {
+  if (!due) return null;
+  const d = new Date(due + "T00:00:00");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const overdue = d < today;
+  const label = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return { label, overdue };
+}
+
+async function loadTasks() {
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error(error);
+    contentEl.innerHTML = '<div class="sd-loading">Couldn\'t load tasks. Check your Supabase URL/key and that the "tasks" table exists.</div>';
+    contentEl.style.display = "block";
+    loadingEl.style.display = "none";
+    return;
+  }
+  tasks = data || [];
+  render();
+}
+
+async function addTask(text, category, due, priority) {
+  if (!text.trim()) return;
+  const { data, error } = await supabase
+    .from("tasks")
+    .insert([{ text: text.trim(), category, due: due || null, priority: priority || "normal", done: false }])
+    .select();
+  if (error) { console.error(error); alert("Couldn't add task: " + error.message); return; }
+  if (data && data[0]) tasks.unshift(data[0]);
+  render();
+}
+
+async function toggleDone(id, done) {
+  const { error } = await supabase.from("tasks").update({ done }).eq("id", id);
+  if (error) { console.error(error); alert("Couldn't update task: " + error.message); return; }
+  const t = tasks.find(t => t.id === id);
+  if (t) t.done = done;
+  render();
+}
+
+async function deleteTask(id) {
+  const { error } = await supabase.from("tasks").delete().eq("id", id);
+  if (error) { console.error(error); alert("Couldn't delete task: " + error.message); return; }
+  tasks = tasks.filter(t => t.id !== id);
+  render();
+}
+
+function render() {
+  loadingEl.style.display = "none";
+  contentEl.style.display = "block";
+
+  const total = tasks.length;
+  const done = tasks.filter(t => t.done).length;
+
+  let html = "";
+  html += '<div class="sd-header">';
+  html += '<div><div class="sd-title">Sam\'s Task Dashboard</div><div class="sd-sub">Everything, sorted into its place.</div></div>';
+  html += '<div class="sd-stats"><span><b>' + total + '</b> total</span><span><b>' + done + '</b> done</span><span><b>' + (total - done) + '</b> open</span></div>';
+  html += '</div>';
+
+  html += '<div class="sd-addbar">';
+  html += '<input type="text" id="sd-input-text" placeholder="Add a task…" />';
+  html += '<select id="sd-input-cat">';
+  CATEGORIES.forEach(c => { html += '<option value="' + c.id + '">' + c.name + '</option>'; });
+  html += '</select>';
+  html += '<select id="sd-input-prio"><option value="normal">Normal</option><option value="high">High priority</option><option value="low">Low priority</option></select>';
+  html += '<input type="date" id="sd-input-due" />';
+  html += '<button class="sd-addbtn" id="sd-add-btn">Add task</button>';
+  html += '</div>';
+
+  html += '<div class="sd-board">';
+  CATEGORIES.forEach(cat => {
+    const catTasks = tasks
+      .filter(t => t.category === cat.id)
+      .sort((a, b) => {
+        if (a.done !== b.done) return a.done ? 1 : -1;
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+    html += '<div class="sd-col" style="--cat-color:' + cat.color + '">';
+    html += '<div class="sd-col-head"><div class="sd-col-icon">' + ICONS[cat.icon] + '</div><div class="sd-col-name">' + cat.name + '</div><div class="sd-col-count">' + catTasks.length + '</div></div>';
+    if (catTasks.length === 0) {
+      html += '<div class="sd-empty">No tasks yet — add one above.</div>';
+    } else {
+      catTasks.forEach(t => {
+        const dueInfo = fmtDue(t.due);
+        html += '<div class="sd-card' + (t.done ? ' sd-done' : '') + '" style="--cat-color:' + cat.color + '">';
+        html += '<input type="checkbox" class="sd-check" ' + (t.done ? 'checked' : '') + ' data-id="' + t.id + '" />';
+        html += '<div class="sd-card-body"><div class="sd-card-text">' + escapeHtml(t.text) + '</div>';
+        html += '<div class="sd-card-meta">';
+        if (dueInfo) html += '<span class="sd-due' + (dueInfo.overdue && !t.done ? ' sd-overdue' : '') + '">' + dueInfo.label + '</span>';
+        if (t.priority && t.priority !== "normal") html += '<span class="sd-prio">' + t.priority + '</span>';
+        html += '</div></div>';
+        html += '<button class="sd-del" data-id="' + t.id + '" title="Delete task">✕</button>';
+        html += '</div>';
+      });
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+
+  contentEl.innerHTML = html;
+  wireEvents();
+}
+
+function wireEvents() {
+  const btn = document.getElementById("sd-add-btn");
+  const input = document.getElementById("sd-input-text");
+  const catSel = document.getElementById("sd-input-cat");
+  const prioSel = document.getElementById("sd-input-prio");
+  const dueInput = document.getElementById("sd-input-due");
+
+  function submit() {
+    addTask(input.value, catSel.value, dueInput.value, prioSel.value);
+    input.value = "";
+    dueInput.value = "";
+    prioSel.value = "normal";
+    input.focus();
+  }
+  btn.addEventListener("click", submit);
+  input.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
+
+  contentEl.querySelectorAll(".sd-check").forEach(cb => {
+    cb.addEventListener("change", () => toggleDone(cb.getAttribute("data-id"), cb.checked));
+  });
+  contentEl.querySelectorAll(".sd-del").forEach(b => {
+    b.addEventListener("click", () => deleteTask(b.getAttribute("data-id")));
+  });
+}
+
+if (!configured) {
+  bannerEl.classList.add("show");
+  loadingEl.style.display = "none";
+} else {
+  supabase = window.supabase.createClient(https://equsgdvtsvkxdbltrclv.supabase.co, sb_publishable_lrvzJlBWJ3v01hsBgaU5aA_5yI3tj9u);
+  loadTasks();
+}
+</script>
+</body>
+</html>
