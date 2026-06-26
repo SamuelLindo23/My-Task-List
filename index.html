@@ -207,7 +207,7 @@ const ICONS = {
 };
 
 const configured = SUPABASE_URL !== "YOUR_SUPABASE_URL" && SUPABASE_ANON_KEY !== "YOUR_SUPABASE_ANON_KEY";
-let supabase = null;
+let supabaseClient = null;
 let tasks = [];
 
 const contentEl = document.getElementById("sd-content");
@@ -231,7 +231,7 @@ function fmtDue(due) {
 }
 
 async function loadTasks() {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from("tasks")
     .select("*")
     .order("created_at", { ascending: false });
@@ -248,7 +248,7 @@ async function loadTasks() {
 
 async function addTask(text, category, due, priority) {
   if (!text.trim()) return;
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from("tasks")
     .insert([{ text: text.trim(), category, due: due || null, priority: priority || "normal", done: false }])
     .select();
@@ -258,7 +258,7 @@ async function addTask(text, category, due, priority) {
 }
 
 async function toggleDone(id, done) {
-  const { error } = await supabase.from("tasks").update({ done }).eq("id", id);
+  const { error } = await supabaseClient.from("tasks").update({ done }).eq("id", id);
   if (error) { console.error(error); alert("Couldn't update task: " + error.message); return; }
   const t = tasks.find(t => t.id === id);
   if (t) t.done = done;
@@ -266,7 +266,7 @@ async function toggleDone(id, done) {
 }
 
 async function deleteTask(id) {
-  const { error } = await supabase.from("tasks").delete().eq("id", id);
+  const { error } = await supabaseClient.from("tasks").delete().eq("id", id);
   if (error) { console.error(error); alert("Couldn't delete task: " + error.message); return; }
   tasks = tasks.filter(t => t.id !== id);
   render();
@@ -358,7 +358,7 @@ if (!configured) {
   bannerEl.classList.add("show");
   loadingEl.style.display = "none";
 } else {
-  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   loadTasks();
 }
 </script>
