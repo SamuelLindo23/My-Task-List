@@ -186,8 +186,8 @@
    - anon public key: same page → Project API keys → "anon public"
    Never paste your service_role key here — only the anon/public key.
    ========================================================= */
-const SUPABASE_URL = "YOUR_SUPABASE_URL";
-const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const SUPABASE_URL = "https://equsgdvtsvkxdbltrclv.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_lrvzJlBWJ3v01hsBgaU5aA_5yI3tj9u";
 /* ========================================================= */
 
 const CATEGORIES = [
@@ -358,7 +358,7 @@ if (!configured) {
   bannerEl.classList.add("show");
   loadingEl.style.display = "none";
 } else {
-  supabase = window.supabase.createClient(https://equsgdvtsvkxdbltrclv.supabase.co, sb_publishable_lrvzJlBWJ3v01hsBgaU5aA_5yI3tj9u);
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   loadTasks();
 }
 </script>
